@@ -1,0 +1,157 @@
+---
+title: "EDA"
+author: "John"
+format: pdf
+editor: visual
+---
+
+# Libraries and setup
+
+```{r, echo=FALSE}
+library(here)
+library(dplyr)
+library(ggplot2)
+library(ggforce)
+source(here("R", "create_finaldata.R"))
+```
+
+```{r}
+names(finaldata)
+```
+
+# Missing Data Analysis
+
+## Count and proportion of NAs for each variable
+
+```{r}
+var <- c("country_name", "ISO", "region", "year", "gdp1000", "OECD", "OECD2023", 
+               "popdens", "urban", "agedep", "male_edu", "temp", "rainfall1000", "matmor",
+               "infmor", "neomor", "un5mor", "earthquake", "drought", "totdeath", "armconf1")
+
+# Calculate the number and proportion of missing values for each variable
+na_table <- data.frame(
+  Variable = var,
+  NA_Count = sapply(var, function(var) sum(is.na(finaldata[[var]]))),
+  Proportion_NA = sapply(var, function(var) sum(is.na(finaldata[[var]])) / nrow(finaldata))
+)
+
+print(na_table)
+```
+
+Not sure which missing mechanism each variable is --MCAR, MAR, MNAR. Will have to ask domain expert.
+
+```{r}
+finaldata |>
+  summary()
+```
+
+# Plotting matmor, infmor, neomor, un5mor,
+
+```{r, echo=FALSE}
+# Group by region and year, and summarize the matmor
+grouped_data <- finaldata %>%
+  group_by(region, year) %>%
+  summarise(matmor = mean(matmor, na.rm = TRUE))  # Summarize matmor by region and year
+
+ggplot(grouped_data, aes(x = year, y = matmor, group = region, color = region)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Maternal Mortality Rate by Region Over Time",
+       x = "Year",
+       y = "Average Maternal Mortality Rate") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  
+```
+
+# 
+
+```{r}
+# Group by region and year, and summarize the neomor
+grouped_data <- finaldata %>%
+  group_by(region, year) %>%
+  summarise(neomor = mean(neomor, na.rm = TRUE))  # Summarize neomor by region and year
+
+# Create the plot
+ggplot(grouped_data, aes(x = year, y = neomor, group = region, color = region)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Neonatal Mortality Rate by Region Over Time",
+       x = "Year",
+       y = "Average Neonatal Mortality Rate") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Tilting x-axis labels for readability
+```
+
+```{r}
+# Group by region and year, and summarize the infmor
+grouped_data <- finaldata %>%
+  group_by(region, year) %>%
+  summarise(infmor = mean(infmor, na.rm = TRUE))  # Summarize infmor by region and year
+
+# Create the plot
+ggplot(grouped_data, aes(x = year, y = infmor, group = region, color = region)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Infant Mortality Rate by Region Over Time",
+       x = "Year",
+       y = "Average Infant Mortality Rate") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Tilting x-axis labels for readability
+```
+
+```{r}
+# Group by region and year, and summarize the un5mor
+grouped_data <- finaldata %>%
+  group_by(region, year) %>%
+  summarise(un5mor = mean(un5mor, na.rm = TRUE))  # Summarize un5mor by region and year
+
+# Create the plot
+ggplot(grouped_data, aes(x = year, y = un5mor, group = region, color = region)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Under 5 Mortality Rate by Region Over Time",
+       x = "Year",
+       y = "Average Under 5 Mortality Rate") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Tilting x-axis labels for readability
+```
+
+In general, all four mortality rates seems to be going down across all regions by year.
+
+```{r}
+# Summing the four mortality rates for each country
+finaldata <- finaldata %>%
+  mutate(total_mortality = matmor + infmor + neomor + un5mor)
+
+# Find the countries with the highest and lowest total mortality rate
+max_mortality <- finaldata %>% filter(total_mortality == max(total_mortality, na.rm = TRUE))
+min_mortality <- finaldata %>% filter(total_mortality == min(total_mortality, na.rm = TRUE))
+
+# Combine the two into a single data frame
+extreme_mortality <- bind_rows(max_mortality, min_mortality)
+
+# Plotting the result
+ggplot(extreme_mortality, aes(x = country_name, y = total_mortality, fill = country_name)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Countries with Highest and Lowest Combined Mortality Rates",
+       x = "Country",
+       y = "Total Mortality Rate (Sum of matmor, infmor, neomor, un5mor)") +
+  theme_minimal()
+
+```
+
+```{r}
+canada_data <- finaldata %>%
+  filter(country_name == "Canada") %>%
+  select(year, matmor)
+
+ggplot(canada_data, aes(x = year, y = matmor)) +
+  geom_line(color = "blue", size = 1) +  # Line plot for the trend
+  geom_point(color = "red", size = 2) +  # Adding points to the line
+  labs(title = "Maternal Mortality Rate in Canada by Year",
+       x = "Year",
+       y = "Maternal Mortality Rate") +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(min(canada_data$year), max(canada_data$year), by = 1)) + # Ensures every year is shown on x-axis 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
