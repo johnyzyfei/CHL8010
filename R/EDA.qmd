@@ -1,5 +1,5 @@
 ---
-title: "EDA"
+title: "Exploratory Data Analysis"
 author: "John"
 format: pdf
 editor: visual
@@ -7,7 +7,7 @@ editor: visual
 
 # Libraries and setup
 
-```{r, echo=FALSE}
+```{r, message=FALSE, warning=FALSE}
 library(here)
 library(dplyr)
 library(ggplot2)
@@ -15,14 +15,21 @@ library(ggforce)
 source(here("R", "create_finaldata.R"))
 ```
 
+Get the column variable names. Then call head() and tail() functions to take a quick look at the dataset.
 ```{r}
 names(finaldata)
+head(finaldata, 10)
+tail(finaldata, 10)
 ```
 
 # Missing Data Analysis
+## Call summary to take a glance at the summary statistics of our dataset.
+```{r}
+finaldata |>
+  summary()
+```
 
 ## Count and proportion of NAs for each variable
-
 ```{r}
 var <- c("country_name", "ISO", "region", "year", "gdp1000", "OECD", "OECD2023", 
                "popdens", "urban", "agedep", "male_edu", "temp", "rainfall1000", "matmor",
@@ -38,17 +45,12 @@ na_table <- data.frame(
 print(na_table)
 ```
 
-Not sure which missing mechanism each variable is --MCAR, MAR, MNAR. Will have to ask domain expert.
+Not sure which missing mechanism each variable is --MCAR, MAR, MNAR. I think it is best to ask some domain experts.
+\newpage
 
-```{r}
-finaldata |>
-  summary()
-```
+# Visualizing matmor, infmor, neomor, un5mor,
 
-# Plotting matmor, infmor, neomor, un5mor,
-
-```{r, echo=FALSE}
-# Group by region and year, and summarize the matmor
+```{r, message=FALSE, warning=FALSE}
 grouped_data <- finaldata %>%
   group_by(region, year) %>%
   summarise(matmor = mean(matmor, na.rm = TRUE))  # Summarize matmor by region and year
@@ -60,12 +62,12 @@ ggplot(grouped_data, aes(x = year, y = matmor, group = region, color = region)) 
        x = "Year",
        y = "Average Maternal Mortality Rate") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom")  # Move the legend to the bottom
 ```
+\newpage
 
-# 
-
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # Group by region and year, and summarize the neomor
 grouped_data <- finaldata %>%
   group_by(region, year) %>%
@@ -79,10 +81,12 @@ ggplot(grouped_data, aes(x = year, y = neomor, group = region, color = region)) 
        x = "Year",
        y = "Average Neonatal Mortality Rate") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Tilting x-axis labels for readability
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = 'bottom')  # Tilting x-axis labels for readability
 ```
+\newpage
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # Group by region and year, and summarize the infmor
 grouped_data <- finaldata %>%
   group_by(region, year) %>%
@@ -96,10 +100,12 @@ ggplot(grouped_data, aes(x = year, y = infmor, group = region, color = region)) 
        x = "Year",
        y = "Average Infant Mortality Rate") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Tilting x-axis labels for readability
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        legend.position = 'bottom')  # Tilting x-axis labels for readability
 ```
+\newpage
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # Group by region and year, and summarize the un5mor
 grouped_data <- finaldata %>%
   group_by(region, year) %>%
@@ -113,45 +119,141 @@ ggplot(grouped_data, aes(x = year, y = un5mor, group = region, color = region)) 
        x = "Year",
        y = "Average Under 5 Mortality Rate") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Tilting x-axis labels for readability
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = 'bottom')  # Tilting x-axis labels for readability
 ```
 
 In general, all four mortality rates seems to be going down across all regions by year.
+\newpage
+
+Combine matmor, infmor, neomor, and un5mor to create a new dataset by country. 
+```{r}
+totalmort <- finaldata %>%
+  group_by(country_name) %>%
+  summarise(
+    total_matmor = sum(matmor, na.rm = TRUE),
+    total_infmor = sum(infmor, na.rm = TRUE),
+    total_neomor = sum(neomor, na.rm = TRUE),
+    total_un5mor = sum(un5mor, na.rm = TRUE)
+  ) %>%
+  mutate(totalmort = total_matmor + total_infmor + total_neomor + total_un5mor)
+```
+
+
+
+
+```{r, warning=FALSE, message=FALSE}
+# Find the country with the maximum totalmort
+max_country <- totalmort %>%
+  filter(totalmort == max(totalmort, na.rm = TRUE)) %>%
+  select(country_name, totalmort)
+
+# Find the country with the minimum totalmort
+min_country <- totalmort %>%
+  filter(totalmort == min(totalmort, na.rm = TRUE)) %>%
+  select(country_name, totalmort)
+
+# View the results
+print(max_country, max_country$totalmort)
+print(min_country, min_country$totalmort)
+
+```
+The two countries with max and min total mortality rates are Sierra Leone with $34614.5$ deaths and Iceland with $221$ deaths.
 
 ```{r}
-# Summing the four mortality rates for each country
-finaldata <- finaldata %>%
-  mutate(total_mortality = matmor + infmor + neomor + un5mor)
+# Filter the data for the max and min countries and log-transform the mortality rates
+combined_data <- finaldata %>%
+  filter(country_name %in% c(max_country$country_name, min_country$country_name)) %>%
+  select(country_name, matmor, infmor, neomor, un5mor) %>%
+  mutate(
+    log_matmor = log(matmor + 1),  # log transformation, adding 1 to avoid log(0)
+    log_infmor = log(infmor + 1),
+    log_neomor = log(neomor + 1),
+    log_un5mor = log(un5mor + 1)
+  ) %>%
+  select(country_name, log_matmor, log_infmor, log_neomor, log_un5mor) %>%
+  gather(key = "mortality_type", value = "log_mortality_rate", log_matmor, log_infmor, log_neomor, log_un5mor)
 
-# Find the countries with the highest and lowest total mortality rate
-max_mortality <- finaldata %>% filter(total_mortality == max(total_mortality, na.rm = TRUE))
-min_mortality <- finaldata %>% filter(total_mortality == min(total_mortality, na.rm = TRUE))
+# Visualize the log-transformed data
+ggplot(combined_data, aes(x = mortality_type, y = log_mortality_rate, fill = country_name)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Log-transformed Mortality Components for Countries with Max and Min Total Mortality",
+       x = "Mortality Type",
+       y = "Log-transformed Mortality Rate",
+       fill = "Country") +
+  theme_minimal()
 
-# Combine the two into a single data frame
-extreme_mortality <- bind_rows(max_mortality, min_mortality)
 
-# Plotting the result
-ggplot(extreme_mortality, aes(x = country_name, y = total_mortality, fill = country_name)) +
-  geom_bar(stat = "identity") +
-  labs(title = "Countries with Highest and Lowest Combined Mortality Rates",
-       x = "Country",
-       y = "Total Mortality Rate (Sum of matmor, infmor, neomor, un5mor)") +
+```
+Taking a look at the log transformed mortality rates for Sierra Leone and Iceland. 
+Intepretation: If the y-axis value is $2$, the actual mortality rate is 
+$\exp(2)−1 \approx 6.39$ per N deaths where N is the measurement metric from the dataset. 
+\newpage
+
+Now I will generate a random country and see if this country has similar rates to Sierra Leone and Iceland.
+```{r, warning=FALSE, message=FALSE}
+# Select a random country from the dataset
+set.seed(123)  # Set seed for reproducibility
+random_country <- finaldata %>%
+  select(country_name) %>%
+  distinct() %>%
+  sample_n(1)  # Randomly select one country
+
+# Specify Sierra Leone and Iceland
+selected_countries <- c("Sierra Leone", "Iceland", random_country$country_name)
+
+# Filter the data for the selected countries (random country, Sierra Leone, and Iceland)
+combined_country_data <- finaldata %>%
+  filter(country_name %in% selected_countries) %>%
+  select(country_name, matmor, infmor, neomor, un5mor) %>%
+  mutate(
+    log_matmor = log(matmor + 1),  # log transformation, adding 1 to avoid log(0)
+    log_infmor = log(infmor + 1),
+    log_neomor = log(neomor + 1),
+    log_un5mor = log(un5mor + 1)
+  ) %>%
+  select(country_name, log_matmor, log_infmor, log_neomor, log_un5mor) %>%
+  gather(key = "mortality_type", value = "log_mortality_rate", log_matmor, log_infmor, log_neomor, log_un5mor)
+
+# Visualize the log-transformed data for the selected countries
+ggplot(combined_country_data, aes(x = mortality_type, y = log_mortality_rate, fill = country_name)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = paste("Log-transformed Mortality Components for", 
+                     random_country$country_name, "Sierra Leone, and Iceland"),
+       x = "Mortality Type",
+       y = "Log-transformed Mortality Rate",
+       fill = "Country") +
+  theme_minimal()
+```
+
+
+Now look at Canada with Sierra Leone and Iceland.
+```{r, warning=FALSE, message=FALSE}
+# Specify Sierra Leone, Iceland, and Canada
+selected_countries <- c("Sierra Leone", "Iceland", "Canada")
+
+# Filter the data for the selected countries (Canada, Sierra Leone, and Iceland)
+combined_country_data <- finaldata %>%
+  filter(country_name %in% selected_countries) %>%
+  select(country_name, matmor, infmor, neomor, un5mor) %>%
+  mutate(
+    log_matmor = log(matmor + 1),  # log transformation, adding 1 to avoid log(0)
+    log_infmor = log(infmor + 1),
+    log_neomor = log(neomor + 1),
+    log_un5mor = log(un5mor + 1)
+  ) %>%
+  select(country_name, log_matmor, log_infmor, log_neomor, log_un5mor) %>%
+  gather(key = "mortality_type", value = "log_mortality_rate", log_matmor, log_infmor, log_neomor, log_un5mor)
+
+# Visualize the log-transformed data for the selected countries
+ggplot(combined_country_data, aes(x = mortality_type, y = log_mortality_rate, fill = country_name)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Log-transformed Mortality Components for Canada, Sierra Leone, and Iceland",
+       x = "Mortality Type",
+       y = "Log-transformed Mortality Rate",
+       fill = "Country") +
   theme_minimal()
 
 ```
-
-```{r}
-canada_data <- finaldata %>%
-  filter(country_name == "Canada") %>%
-  select(year, matmor)
-
-ggplot(canada_data, aes(x = year, y = matmor)) +
-  geom_line(color = "blue", size = 1) +  # Line plot for the trend
-  geom_point(color = "red", size = 2) +  # Adding points to the line
-  labs(title = "Maternal Mortality Rate in Canada by Year",
-       x = "Year",
-       y = "Maternal Mortality Rate") +
-  theme_minimal() +
-  scale_x_continuous(breaks = seq(min(canada_data$year), max(canada_data$year), by = 1)) + # Ensures every year is shown on x-axis 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
-```
+# Summary
+We looked at the column variable names, missing values for each variable and their proportions, visialized total mortality rate for the country with max/min mortality rates, and compared it to a random country and Canada. 
