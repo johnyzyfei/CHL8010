@@ -4,7 +4,7 @@ library("here")
 source(here("R", "prep_maternalmortality.R"))
 source(here("R", "prep_disaster.R"))
 source(here("R", "prep_conflict.R"))
-covs <- read.csv(here("original", "covariates.csv"), header = TRUE)
+covs <- read.csv(here("data", "original", "covariates.csv"), header = TRUE)
 
 #put all data frames into list
 alllist <- list(wbdata, disdata, confdata)
@@ -25,3 +25,5 @@ finaldata <- finaldata |>
          drought = replace_na(drought, 0),
          earthquake = replace_na(earthquake, 0),
          totdeath = replace_na(totdeath, 0))
+
+write.csv(finaldata, file = here("data", "analytical", "finaldata.csv"), row.names = FALSE)

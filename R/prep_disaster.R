@@ -7,7 +7,7 @@ library("readr")
 library("countrycode")
 
 ## ======================= Week 2 ======================= ##
-rawdat <- read.csv(here("original", "disaster.csv"), header=TRUE)
+rawdat <- read.csv(here("data", "original", "disaster.csv"), header=TRUE)
 
 # Subset data to have only the variables Country.Name, X2000 – X2019
 # Change format to long and remove prefix

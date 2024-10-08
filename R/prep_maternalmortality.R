@@ -6,7 +6,7 @@ library("readr")
 library("countrycode")
 
 ## ======================= Week 2 ======================= ##
-rawdat <- read.csv(here("original", "maternalmortality.csv"), header = TRUE)
+rawdat <- read.csv(here("data", "original", "maternalmortality.csv"), header = TRUE)
 
 data_subset <- rawdat %>%
   select(Country.Name, X2000:X2019)
@@ -39,10 +39,10 @@ tail(data_long, 20)
 # underdat <- readdat(“under5mortality.csv”)
 
 ## ======================= Week 3 (Adjusted to Aya's Code) ======================= ##
-matmor0 <- read.csv(here("original", "maternalmortality.csv"), header = TRUE)
-infmor0 <- read.csv(here("original", "infantmortality.csv"), header = TRUE)
-neomor0 <- read.csv(here("original", "neonatalmortality.csv"), header = TRUE)
-un5mor0 <- read.csv(here("original", "under5mortality.csv"), header = TRUE)
+matmor0 <- read.csv(here("data", "original", "maternalmortality.csv"), header = TRUE)
+infmor0 <- read.csv(here("data", "original", "infantmortality.csv"), header = TRUE)
+neomor0 <- read.csv(here("data", "original", "neonatalmortality.csv"), header = TRUE)
+un5mor0 <- read.csv(here("data", "original", "under5mortality.csv"), header = TRUE)
 
 
 ### write a function that does the above manipulation to each data
