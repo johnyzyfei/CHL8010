@@ -1,13 +1,12 @@
 ---
 title: "table1"
 author: "Zhengyang Fei"
-format: pdf
+format: html
 editor: visual
 ---
 
-## Note:
-I have created tables for "2000-2004", "2005-2009", "2010-2014", "2015-2019"
-Next I will combine them in a nice way
+## Update:
+I have created tables for "2000-2004", "2005-2009", "2010-2014", "2015-2019". Now I am having trouble combining the tables together. I cannot find a way to directly work within the table1 or kableExtra package. 
 
 ```{r, warning=FALSE, message=FALSE}
 library("here")
@@ -15,6 +14,8 @@ library("dplyr")
 library(Hmisc)
 library(table1)
 library(knitr)
+library("kableExtra")
+library(htmltools)
 
 ```
 
@@ -31,7 +32,7 @@ byyear <- conflict %>%
   dplyr::filter(!is.na(year_group))  
 
 # Factoring 
-byyear$armconf1f <- factor(byyear$armconf1, levels = c(0,1), labels = c("No armed conflict", "Armed conflict"))
+byyear$armconf1f <- factor(byyear$armconf1, levels = c(0,1), labels = c("No", "Yes"))
 byyear$droughtf <- factor(byyear$drought, levels = c(0,1), labels = c("No", "Yes"))
 byyear$earthquakef <- factor(byyear$earthquake, levels = c(0,1), labels = c("No", "Yes"))
 byyear$OECDf <- factor(byyear$OECD, levels = c(0,1), labels = c("No", "Yes"))
@@ -68,35 +69,47 @@ byyear_2010_2014 <- byyear %>%
   filter(year_group == "2010-2014")
 byyear_2015_2019 <- byyear %>%
   filter(year_group == "2015-2019")
-
-
-# Potential title
-kable(data.frame(Title = "Summary Table for 2000-2004"), col.names = NULL, align = "c")
 ```
 
 ```{r}
-table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f, 
+table1_2000_2004 <-
+  table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
        data = byyear_2000_2004,
        render.continuous = c(.="Median [Min, Max]"),
        overall = c(left="Total"))
+t1kable(table1_2000_2004) |>
+  add_header_above(c(" " = 2, "Armed Conflict" = 2))
 
-
-table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f, 
+table1_2005_2009 <-
+  table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
        data = byyear_2005_2009,
        render.continuous = c(.="Median [Min, Max]"),
        overall = c(left="Total"))
+t1kable(table1_2005_2009) |>
+  add_header_above(c(" " = 2, "Armed Conflict" = 2))
 
-table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f, 
+
+table1_2010_2014 <-
+  table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
        data = byyear_2010_2014,
        render.continuous = c(.="Median [Min, Max]"),
        overall = c(left="Total"))
+t1kable(table1_2010_2014) |>
+  add_header_above(c(" " = 2, "Armed Conflict" = 2))
 
-table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f, 
+
+table1_2015_2019 <-
+  table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
        data = byyear_2015_2019,
        render.continuous = c(.="Median [Min, Max]"),
        overall = c(left="Total"))
+t1kable(table1_2015_2019) |>
+  add_header_above(c(" " = 2, "Armed Conflict" = 2))
+
 ```
-```
+
+\`\`\`
+
 
 
 
