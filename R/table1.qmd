@@ -6,11 +6,12 @@ editor: visual
 ---
 
 ## Update:
-I have created tables for "2000-2004", "2005-2009", "2010-2014", "2015-2019". Now I am having trouble combining the tables together. I cannot find a way to directly work within the table1 or kableExtra package. 
+
+I have created tables for "2000-2004", "2005-2009", "2010-2014", "2015-2019". Now I am having trouble combining the tables together. I cannot find a way to directly work within the table1 or kableExtra package.
 
 ```{r, warning=FALSE, message=FALSE}
 library("here")
-library("dplyr")
+library(tidyverse)
 library(Hmisc)
 library(table1)
 library(knitr)
@@ -22,96 +23,142 @@ library(htmltools)
 ```{r}
 conflict <- read.csv(here("data", "analytical", "finaldata.csv"))
 
-# Define year groupings for the data
-conflict$year_group <- cut(conflict$year, 
-                           breaks = c(1999, 2004, 2009, 2014, 2019),
-                           labels = c("2000-2004", "2005-2009", "2010-2014", "2015-2019"))
 
-# Filter the data for the year groups and create baseline for those groups
-byyear <- conflict %>%
-  dplyr::filter(!is.na(year_group))  
+# Grouping data into bins
+conflict <- conflict |>
+  mutate(year_group = case_when(
+    year >= 2000 & year < 2005 ~ "2000-2004",
+    year >= 2005 & year < 2010 ~ "2005-2009",
+    year >= 2010 & year < 2015 ~ "2010-2014",
+    year >= 2015 & year < 2020 ~ "2015-2019")) |>
+    group_by(country_name, year_group) |>
+    mutate(overall_conf = if_else(any(armconf1 == 1), 1, 0)) |>
+    ungroup()
 
-# Factoring 
-byyear$armconf1f <- factor(byyear$armconf1, levels = c(0,1), labels = c("No", "Yes"))
-byyear$droughtf <- factor(byyear$drought, levels = c(0,1), labels = c("No", "Yes"))
-byyear$earthquakef <- factor(byyear$earthquake, levels = c(0,1), labels = c("No", "Yes"))
-byyear$OECDf <- factor(byyear$OECD, levels = c(0,1), labels = c("No", "Yes"))
-
-# Relabeling 
-label(byyear$gdp1000)       <- "GDP per capita"
-label(byyear$OECD)          <- "OECD member"
-label(byyear$popdens)       <- "Population density"
-label(byyear$urban)         <- "Urban residence"
-label(byyear$agedep)        <- "Age dependency ratio"
-label(byyear$male_edu)      <- "Male education"
-label(byyear$temp)          <- "Mean annual temperature"
-label(byyear$rainfall1000)  <- "Mean annual rain fall"
-label(byyear$earthquakef)   <- "Earthquake"
-label(byyear$earthquake)    <- "Earthquake"
-label(byyear$droughtf)      <- "Drought"
-label(byyear$drought)       <- "Drought"
-label(byyear$armconf1f)     <- "Armed conflict"
-label(byyear$totdeath)      <- "Total number of deaths"
-label(byyear$matmor)        <- "Maternal mortality"
-label(byyear$infmor)        <- "Infant mortality"
-label(byyear$neomor)        <- "Neonatal mortality"
-label(byyear$un5mor)        <- "Under 5 mortality"
-label(byyear$armconf1f)     <- "Armed conflict"
-units(byyear$gdp1000)       <- "USD"
+# Factorize variables
+conflict$OECD <- factor(conflict$OECD, 
+                            levels = c(0, 1), 
+                            labels = c("No", "Yes"))
+conflict$overall_conf <- factor(conflict$overall_conf, 
+                             levels = c(0, 1), 
+                             labels = c("No Armed Conflict", "Armed Conflict"))
+conflict$drought <- factor(conflict$drought, 
+                            levels = c(0, 1), 
+                            labels = c("No Drought", "Drought"))
+conflict$earthquake <- factor(conflict$earthquake, 
+                               levels = c(0, 1), 
+                               labels = c("No Earthquake", "Earthquake"))
 
 
-# Split the data into four datasets based on year_group
-byyear_2000_2004 <- byyear %>%
-  filter(year_group == "2000-2004")
-byyear_2005_2009 <- byyear %>%
-  filter(year_group == "2005-2009")
-byyear_2010_2014 <- byyear %>%
-  filter(year_group == "2010-2014")
-byyear_2015_2019 <- byyear %>%
-  filter(year_group == "2015-2019")
+# Relabel
+# Re-labelling variables
+label(conflict$overall_conf) <- "Death From Conflicts"
+label(conflict$earthquake) <- "Earthquake Status"
+label(conflict$drought) <- "Drought Status"
+label(conflict$gdp1000) <- "GDP Per 1000"
+label(conflict$popdens) <- "Population Density"
+label(conflict$male_edu) <- "Male Education"
+label(conflict$temp) <- "Mean Annual Temperature"
+
+# Creating the table
+cat("\\begin{center}")
+table1(~ OECD + male_edu + gdp1000 + popdens + drought + earthquake + temp
+       | overall_conf + year_group, 
+       data = conflict, 
+       title = "Summary of Earthquake Data by Armed Conflict",
+       group.title = "Exposure: Armed Conflict")
+cat("\\end{center}")
+
 ```
 
 ```{r}
-table1_2000_2004 <-
-  table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
-       data = byyear_2000_2004,
-       render.continuous = c(.="Median [Min, Max]"),
-       overall = c(left="Total"))
-t1kable(table1_2000_2004) |>
-  add_header_above(c(" " = 2, "Armed Conflict" = 2))
-
-table1_2005_2009 <-
-  table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
-       data = byyear_2005_2009,
-       render.continuous = c(.="Median [Min, Max]"),
-       overall = c(left="Total"))
-t1kable(table1_2005_2009) |>
-  add_header_above(c(" " = 2, "Armed Conflict" = 2))
 
 
-table1_2010_2014 <-
-  table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
-       data = byyear_2010_2014,
-       render.continuous = c(.="Median [Min, Max]"),
-       overall = c(left="Total"))
-t1kable(table1_2010_2014) |>
-  add_header_above(c(" " = 2, "Armed Conflict" = 2))
+## Four Tables for each year group
+# # Define year groupings for the data
+# conflict$year_group <- cut(conflict$year, 
+#                            breaks = c(1999, 2004, 2009, 2014, 2019),
+#                            labels = c("2000-2004", "2005-2009", "2010-2014", "2015-2019"))
+# 
+# # Filter the data for the year groups and create baseline for those groups
+# byyear <- conflict %>%
+#   dplyr::filter(!is.na(year_group))  
+# 
+# # Factoring 
+# byyear$armconf1f <- factor(byyear$armconf1, levels = c(0,1), labels = c("No", "Yes"))
+# byyear$droughtf <- factor(byyear$drought, levels = c(0,1), labels = c("No", "Yes"))
+# byyear$earthquakef <- factor(byyear$earthquake, levels = c(0,1), labels = c("No", "Yes"))
+# byyear$OECDf <- factor(byyear$OECD, levels = c(0,1), labels = c("No", "Yes"))
+# 
+# # Relabeling 
+# label(byyear$gdp1000)       <- "GDP per capita"
+# label(byyear$OECD)          <- "OECD member"
+# label(byyear$popdens)       <- "Population density"
+# label(byyear$urban)         <- "Urban residence"
+# label(byyear$agedep)        <- "Age dependency ratio"
+# label(byyear$male_edu)      <- "Male education"
+# label(byyear$temp)          <- "Mean annual temperature"
+# label(byyear$rainfall1000)  <- "Mean annual rain fall"
+# label(byyear$earthquakef)   <- "Earthquake"
+# label(byyear$earthquake)    <- "Earthquake"
+# label(byyear$droughtf)      <- "Drought"
+# label(byyear$drought)       <- "Drought"
+# label(byyear$armconf1f)     <- "Armed conflict"
+# label(byyear$totdeath)      <- "Total number of deaths"
+# label(byyear$matmor)        <- "Maternal mortality"
+# label(byyear$infmor)        <- "Infant mortality"
+# label(byyear$neomor)        <- "Neonatal mortality"
+# label(byyear$un5mor)        <- "Under 5 mortality"
+# label(byyear$armconf1f)     <- "Armed conflict"
+# units(byyear$gdp1000)       <- "USD"
+# 
+# 
+# # Split the data into four datasets based on year_group
+# byyear_2000_2004 <- byyear %>%
+#   filter(year_group == "2000-2004")
+# byyear_2005_2009 <- byyear %>%
+#   filter(year_group == "2005-2009")
+# byyear_2010_2014 <- byyear %>%
+#   filter(year_group == "2010-2014")
+# byyear_2015_2019 <- byyear %>%
+#   filter(year_group == "2015-2019")
 
 
-table1_2015_2019 <-
-  table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
-       data = byyear_2015_2019,
-       render.continuous = c(.="Median [Min, Max]"),
-       overall = c(left="Total"))
-t1kable(table1_2015_2019) |>
-  add_header_above(c(" " = 2, "Armed Conflict" = 2))
+
+# table1_2000_2004 <-
+#   table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
+#        data = byyear_2000_2004,
+#        render.continuous = c(.="Median [Min, Max]"),
+#        overall = c(left="Total"))
+# t1kable(table1_2000_2004) |>
+#   add_header_above(c(" " = 2, "Armed Conflict" = 2))
+# 
+# table1_2005_2009 <-
+#   table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
+#        data = byyear_2005_2009,
+#        render.continuous = c(.="Median [Min, Max]"),
+#        overall = c(left="Total"))
+# t1kable(table1_2005_2009) |>
+#   add_header_above(c(" " = 2, "Armed Conflict" = 2))
+# 
+# 
+# table1_2010_2014 <-
+#   table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
+#        data = byyear_2010_2014,
+#        render.continuous = c(.="Median [Min, Max]"),
+#        overall = c(left="Total"))
+# t1kable(table1_2010_2014) |>
+#   add_header_above(c(" " = 2, "Armed Conflict" = 2))
+# 
+# 
+# table1_2015_2019 <-
+#   table1(~ gdp1000 + OECDf + popdens + urban + agedep + male_edu + temp + rainfall1000 + earthquakef + droughtf | armconf1f,
+#        data = byyear_2015_2019,
+#        render.continuous = c(.="Median [Min, Max]"),
+#        overall = c(left="Total"))
+# t1kable(table1_2015_2019) |>
+#   add_header_above(c(" " = 2, "Armed Conflict" = 2))
 
 ```
 
 \`\`\`
-
-
-
-
-
-
