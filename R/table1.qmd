@@ -1,13 +1,13 @@
 ---
 title: "table1"
 author: "Zhengyang Fei"
-format: html
+format: pdf
 editor: visual
 ---
 
-## Update:
+## Update 2024=1-15:
 
-I have created tables for "2000-2004", "2005-2009", "2010-2014", "2015-2019". Now I am having trouble combining the tables together. I cannot find a way to directly work within the table1 or kableExtra package.
+I have kept code for year groups "2000-2004", "2005-2009", "2010-2014", "2015-2019". Also finished code for creating complete table1.  
 
 ```{r, warning=FALSE, message=FALSE}
 library("here")
